@@ -2,19 +2,19 @@
 import webview
 import os
 import sys
+from pathlib import Path
 from engine import Engine
 
-# --- THIS FINDS THE HTML FILE INSIDE THE EXE OR LOCAL FOLDER ---
-def get_resource_path(relative_path):
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-HTML_FILE = get_resource_path('index.html')
-# ---------------------------------------------------------------
+def get_html_path():
+    """Gets the absolute path to index.html, whether running as a script or an EXE."""
+    if getattr(sys, 'frozen', False):
+        # Running inside a PyInstaller EXE
+        base_path = Path(sys._MEIPASS)
+    else:
+        # Running as a normal script
+        base_path = Path(__file__).parent
+        
+    return str(base_path / "index.html")
 
 class API:
     def __init__(self):
@@ -46,7 +46,6 @@ class API:
         return None
 
     def open_output_folder(self):
-        """Opens the output folder in Windows Explorer."""
         if os.path.exists(self.engine.output_dir):
             os.startfile(self.engine.output_dir)
 
@@ -65,10 +64,11 @@ def bind_drag_drop(window):
 
 if __name__ == "__main__":
     api = API()
+    html_path = get_html_path()
     
     window = webview.create_window(
         title="ConvertFlow Pro", 
-        url=HTML_FILE,  # Using the dynamic path here
+        url=html_path, # Load from the absolute path
         js_api=api,
         width=1000, 
         height=750,
