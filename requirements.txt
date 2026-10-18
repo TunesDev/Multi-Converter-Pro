@@ -1,0 +1,5 @@
+pywebview
+pillow
+imageio-ffmpeg
+ffmpeg-python
+windnd

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvertFlow</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; user-select: none; }
+        
+        body {
+            background-color: #09090B;
+            color: #FAFAFA;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.12), transparent 30%);
+        }
+
+        .title-bar {
+            height: 40px; background: rgba(9, 9, 11, 0.8); backdrop-filter: blur(10px);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            -webkit-app-region: drag;
+        }
+        .title-bar .title { font-size: 12px; color: #A1A1AA; font-weight: 500; }
+        .title-bar .close-btn {
+            background: transparent; border: none; color: #A1A1AA; font-size: 16px; cursor: pointer;
+            padding: 5px 10px; border-radius: 4px; transition: 0.2s; -webkit-app-region: no-drag;
+        }
+        .title-bar .close-btn:hover { background: #EF4444; color: white; }
+
+        .content { display: flex; flex: 1; overflow: hidden; }
+
+        .sidebar {
+            width: 320px; background: rgba(24, 24, 27, 0.5); border-right: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 30px 20px; display: flex; flex-direction: column;
+        }
+
+        .logo { font-size: 24px; font-weight: 700; margin-bottom: 40px; letter-spacing: -0.5px; }
+        .logo span { color: #6366F1; }
+
+        .setting-group { margin-bottom: 25px; }
+        .setting-group label { display: block; font-size: 11px; font-weight: 600; color: #A1A1AA; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        select {
+            width: 100%; background: #18181B; border: 1px solid #27272A; color: white;
+            padding: 12px; border-radius: 8px; outline: none; font-size: 14px;
+            appearance: none; cursor: pointer; transition: border 0.2s;
+        }
+        select:hover { border-color: #6366F1; }
+        select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .output-box {
+            background: #18181B; border: 1px solid #27272A; border-radius: 8px;
+            padding: 10px; display: flex; align-items: center; gap: 10px;
+        }
+        .output-path { font-size: 11px; color: #A1A1AA; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .folder-btn {
+            background: transparent; border: 1px solid #3F3F46; color: #FAFAFA;
+            padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: 0.2s;
+        }
+        .folder-btn:hover { background: #27272A; }
+
+        .progress-container {
+            width: 100%; height: 6px; background: #27272A; border-radius: 10px;
+            margin-bottom: 15px; overflow: hidden; display: none;
+        }
+        .progress-bar {
+            height: 100%; background: #6366F1; width: 0%; border-radius: 10px;
+            box-shadow: 0 0 10px #6366F1; transition: width 0.2s ease;
+        }
+
+        .btn {
+            background: #6366F1; color: white; border: none; padding: 15px; border-radius: 8px;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: auto; width: 100%;
+        }
+        .btn:hover { background: #4F46E5; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+        .btn:disabled { background: #27272A; color: #71717A; cursor: not-allowed; box-shadow: none; }
+
+        /* NEW: Open Folder Button */
+        .open-folder-btn {
+            display: none; /* Hidden by default */
+            background: rgba(16, 185, 129, 0.1); color: #10B981;
+            border: 1px solid #10B981; padding: 15px; border-radius: 8px; width: 100%;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px;
+            align-items: center; justify-content: center; gap: 8px;
+        }
+        .open-folder-btn:hover { background: rgba(16, 185, 129, 0.2); box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+
+        .main { flex: 1; padding: 40px; display: flex; flex-direction: column; overflow: hidden; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h1 { font-size: 28px; font-weight: 600; }
+        
+        .header-actions { display: flex; gap: 10px; }
+        
+        .clear-btn {
+            background: transparent; color: #EF4444; border: 1px solid #EF4444;
+            padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: 0.2s;
+        }
+        .clear-btn:hover { background: rgba(239, 68, 68, 0.1); }
+
+        .add-btn {
+            background: rgba(99, 102, 241, 0.1); color: #818CF8;
+            padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.2); cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .add-btn:hover { background: rgba(99, 102, 241, 0.2); }
+
+        .dropzone {
+            border: 2px dashed #3F3F46; border-radius: 12px; height: 120px;
+            display: flex; align-items: center; justify-content: center; gap: 15px;
+            margin-bottom: 25px; background: rgba(24, 24, 27, 0.3); transition: 0.2s;
+        }
+        .dropzone.active { border-color: #6366F1; background: rgba(99, 102, 241, 0.1); }
+        .dropzone p { color: #A1A1AA; font-size: 14px; }
+
+        .file-list { flex: 1; overflow-y: auto; padding-right: 10px; margin-bottom: 15px; }
+        .file-list::-webkit-scrollbar { width: 6px; }
+        .file-list::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
+
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; color: #52525B; gap: 15px;
+        }
+
+        .file-item {
+            display: flex; align-items: center; background: rgba(24, 24, 27, 0.7);
+            border: 1px solid #27272A; padding: 12px 20px; border-radius: 10px;
+            margin-bottom: 10px; transition: all 0.2s;
+        }
+        .file-item:hover { border-color: #3F3F46; transform: translateY(-1px); }
+        
+        .checkbox {
+            width: 20px; height: 20px; border-radius: 6px; border: 2px solid #52525B;
+            margin-right: 15px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+        }
+        .checkbox.checked { background: #6366F1; border-color: #6366F1; }
+        .checkbox.checked::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+
+        .file-icon { font-size: 18px; margin-right: 15px; }
+
+        .file-name-wrapper { flex: 1; display: flex; align-items: center; gap: 10px; }
+        .file-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .rename-input {
+            background: #09090B; border: 1px solid #6366F1; color: white;
+            padding: 4px 8px; border-radius: 4px; font-size: 14px; outline: none;
+            width: 100%; display: none;
+        }
+
+        .rename-btn {
+            background: transparent; border: none; color: #A1A1AA; cursor: pointer;
+            padding: 4px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center;
+        }
+        .rename-btn:hover { color: #6366F1; background: rgba(99, 102, 241, 0.1); }
+
+        .file-ext { font-size: 11px; font-weight: 600; color: #818CF8; background: rgba(99, 102, 241, 0.1); padding: 4px 8px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+    <div class="title-bar">
+        <div class="title">ConvertFlow Pro</div>
+        <button class="close-btn" onclick="window.pywebview.api.close_app()">✕</button>
+    </div>
+
+    <div class="content">
+        <div class="sidebar">
+            <div class="logo">Convert<span>Flow</span></div>
+            
+            <div class="setting-group">
+                <label>Target Format</label>
+                <select id="format-select" disabled>
+                    <option>Waiting for files...</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Output Directory</label>
+                <div class="output-box">
+                    <div class="output-path" id="output-path">~/Downloads/Converted_Files</div>
+                    <button class="folder-btn" onclick="pickFolder()">Change</button>
+                </div>
+            </div>
+
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+
+            <button class="btn" id="convert-btn" disabled onclick="convertFiles()">Convert Now</button>
+            
+            <!-- NEW: Open Folder Button -->
+            <button class="open-folder-btn" id="open-folder-btn" onclick="openOutputFolder()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                Open Output Folder
+            </button>
+        </div>
+
+        <div class="main">
+            <div class="header">
+                <div style="display:flex; align-items:center; gap: 15px;">
+                    <h1>File Queue</h1>
+                    <div class="checkbox" id="select-all-cb" onclick="toggleAll()" title="Select/Deselect All"></div>
+                </div>
+                <div class="header-actions">
+                    <button class="clear-btn" onclick="clearFiles()">Clear All</button>
+                    <button class="add-btn" onclick="openFileDialog()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                        Add Files
+                    </button>
+                </div>
+            </div>
+
+            <div class="dropzone" id="dropzone">
+                <svg width="24" height="24" fill="none" stroke="#A1A1AA" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <p>Drag & Drop files here</p>
+            </div>
+
+            <div class="file-list" id="file-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let files = [];
+        let lockedCategory = null;
+
+        window.processDroppedFiles = function(paths) {
+            processFiles(paths);
+            document.getElementById('dropzone').classList.remove('active');
+        };
+
+        window.addEventListener('dragover', (e) => { e.preventDefault(); document.getElementById('dropzone').classList.add('active'); });
+        window.addEventListener('dragleave', (e) => { e.preventDefault(); document.getElementById('dropzone').classList.remove('active'); });
+        window.addEventListener('drop', (e) => e.preventDefault());
+
+        async function pickFolder() {
+            const newPath = await window.pywebview.api.open_folder_dialog();
+            if (newPath) document.getElementById('output-path').innerText = newPath;
+        }
+
+        async function openFileDialog() {
+            const paths = await window.pywebview.api.open_file_dialog();
+            if (paths && paths.length > 0) processFiles(paths);
+        }
+
+        async function openOutputFolder() {
+            await window.pywebview.api.open_output_folder();
+        }
+
+        function processFiles(filePaths) {
+            if (!filePaths || filePaths.length === 0) return;
+
+            for (let path of filePaths) {
+                const ext = path.split('.').pop().toLowerCase();
+                let category = 'other';
+                let formats = [];
+
+                if (['jpg','jpeg','png','webp','bmp'].includes(ext)) { category = 'image'; formats = ["PDF", "PNG", "JPG", "WEBP"]; }
+                else if (['mp4','mov','avi','mkv','webm'].includes(ext)) { category = 'video'; formats = ["MP4", "MP3", "WAV"]; }
+                else if (['mp3','wav','flac','m4a'].includes(ext)) { category = 'audio'; formats = ["MP3", "WAV"]; }
+                else { alert("Unsupported file type: " + ext); continue; }
+
+                if (!lockedCategory && files.length === 0) lockedCategory = category;
+                if (category !== lockedCategory) { alert(`You cannot mix ${lockedCategory}s with other file types.`); continue; }
+
+                const select = document.getElementById('format-select');
+                select.disabled = false;
+                select.innerHTML = formats.map(f => `<option value="${f}">${f}</option>`).join('');
+
+                const fullName = path.split('\\').pop().split('/').pop();
+                const nameWithoutExt = fullName.replace(/\.[^/.]+$/, "");
+                files.push({ path: path, name: nameWithoutExt, selected: true });
+            }
+            renderList();
+        }
+
+        function getIcon(ext) {
+            if (['JPG','JPEG','PNG','WEBP','BMP'].includes(ext)) return '🖼️';
+            if (['MP4','MOV','AVI','MKV','WEBM'].includes(ext)) return '🎬';
+            if (['MP3','WAV','FLAC','M4A'].includes(ext)) return '🎵';
+            return '📄';
+        }
+
+        function renderList() {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            const convertBtn = document.getElementById('convert-btn');
+            const selectAllCb = document.getElementById('select-all-cb');
+
+            if (files.length === 0) {
+                list.innerHTML = `<div class="empty-state"><span>No files added yet.</span></div>`;
+                convertBtn.disabled = true;
+                selectAllCb.classList.remove('checked');
+                document.getElementById('format-select').disabled = true;
+                document.getElementById('format-select').innerHTML = '<option>Waiting for files...</option>';
+                return;
+            }
+
+            const selectedCount = files.filter(f => f.selected).length;
+            convertBtn.disabled = selectedCount === 0;
+            
+            if (selectedCount === files.length) selectAllCb.classList.add('checked');
+            else selectAllCb.classList.remove('checked');
+
+            files.forEach((f, index) => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                const ext = f.path.split('.').pop().toUpperCase();
+                const icon = getIcon(ext);
+                
+                div.innerHTML = `
+                    <div class="checkbox ${f.selected ? 'checked' : ''}" onclick="toggleSelect(${index})"></div>
+                    <div class="file-icon">${icon}</div>
+                    <div class="file-name-wrapper">
+                        <div class="file-name" id="name-text-${index}">${f.name}</div>
+                        <input type="text" class="rename-input" id="rename-input-${index}" value="${f.name}" 
+                               onkeydown="handleRename(event, ${index})" onblur="cancelRename(${index})">
+                        <button class="rename-btn" onclick="startRename(${index})">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                    </div>
+                    <div class="file-ext">${ext}</div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function toggleSelect(index) {
+            files[index].selected = !files[index].selected;
+            renderList();
+        }
+
+        function toggleAll() {
+            const allSelected = files.every(f => f.selected);
+            files.forEach(f => f.selected = !allSelected);
+            renderList();
+        }
+
+        function startRename(index) {
+            document.getElementById(`name-text-${index}`).style.display = 'none';
+            const input = document.getElementById(`rename-input-${index}`);
+            input.style.display = 'block';
+            input.focus();
+            input.select();
+        }
+
+        function cancelRename(index) {
+            document.getElementById(`name-text-${index}`).style.display = 'block';
+            document.getElementById(`rename-input-${index}`).style.display = 'none';
+        }
+
+        function handleRename(e, index) {
+            if (e.key === 'Enter') {
+                const newName = document.getElementById(`rename-input-${index}`).value.trim();
+                if (newName) files[index].name = newName;
+                renderList();
+            } else if (e.key === 'Escape') {
+                cancelRename(index);
+            }
+        }
+
+        function clearFiles() {
+            files = [];
+            lockedCategory = null;
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('open-folder-btn').style.display = 'none';
+            renderList();
+        }
+
+        window.updateProgress = function(percent) {
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('progress-bar').style.width = percent + '%';
+        };
+
+        async function convertFiles() {
+            const selected = files.filter(f => f.selected);
+            if (selected.length === 0) return alert("Please select at least one file.");
+            
+            const targetFormat = document.getElementById('format-select').value.toLowerCase();
+            const btn = document.getElementById('convert-btn');
+            const openBtn = document.getElementById('open-folder-btn');
+            
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+            openBtn.style.display = 'none'; // Hide folder button while processing
+            
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('progress-bar').style.width = '0%';
+
+            const response = await window.pywebview.api.convert_files(selected, targetFormat);
+            
+            btn.innerText = "Convert Now";
+            renderList();
+            
+            if (response[0]) {
+                // Conversion succeeded! Show the green folder button
+                openBtn.style.display = 'flex'; 
+                alert(response[1]);
+            } else {
+                alert("Error: " + response[1]);
+                document.getElementById('progress-container').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
