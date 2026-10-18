@@ -1,11 +1,11 @@
 # engine.py
 import os
 import io
+import sys
 import subprocess
 from pathlib import Path
 from PIL import Image
 import imageio_ffmpeg
-import ffmpeg
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".ico"}
 VID_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".gif"}
@@ -15,10 +15,6 @@ class Engine:
     def __init__(self):
         self.output_dir = str(Path.home() / "Downloads" / "Converted_Files")
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
-        
-        # Add FFmpeg to PATH for the ffmpeg-python wrapper
-        ffmpeg_dir = os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
-        os.environ["PATH"] += os.pathsep + ffmpeg_dir
 
     def convert(self, files, target_format, progress_callback=None):
         target_format = target_format.lower()
@@ -59,39 +55,50 @@ class Engine:
                     send_progress(i + 1, total_files)
 
             elif target_format in ["mp4", "mp3", "wav"]:
-                ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                try:
+                    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                except Exception as e:
+                    return False, f"Could not find FFmpeg engine: {e}"
+
                 for i, f in enumerate(files):
                     out_name = f['name'] + f".{target_format}"
                     out_path = Path(self.output_dir) / out_name
                     
                     try:
-                        # We use direct subprocess instead of ffmpeg-python to ensure NO CMD WINDOW
-                        cmd = [ffmpeg_exe, "-y", "-i", f['path'], str(out_path)]
+                        # FIXED COMMAND ORDER: Input -> Format specific flags -> Output
+                        cmd = [ffmpeg_exe, "-y", "-i", f['path']]
+                        
                         if target_format == "mp3":
-                            cmd.insert(3, "-vn")
-                            cmd.extend(["-acodec", "libmp3lame"])
+                            cmd.extend(["-vn", "-acodec", "libmp3lame", str(out_path)])
                         elif target_format == "wav":
-                            cmd.insert(3, "-vn")
-                            cmd.extend(["-acodec", "pcm_s16le"])
+                            cmd.extend(["-vn", "-acodec", "pcm_s16le", str(out_path)])
+                        else:
+                            cmd.append(str(out_path))
 
-                        # THE MAGIC FLAG: This hides the CMD window
-                        subprocess.run(
+                        # Run FFmpeg
+                        result = subprocess.run(
                             cmd, 
-                            stdout=subprocess.DEVNULL, 
-                            stderr=subprocess.DEVNULL, 
+                            stdout=subprocess.PIPE, 
+                            stderr=subprocess.PIPE, 
+                            text=True,
                             creationflags=subprocess.CREATE_NO_WINDOW
                         )
                         
                         if out_path.exists(): 
                             success_count += 1
+                        else:
+                            # Print the actual FFmpeg error to the terminal for debugging
+                            print(f"FFmpeg Error for {f['name']}:")
+                            print(result.stderr[-500:]) # Print the last 500 chars of the error
+                            
                     except Exception as e:
-                        print(f"FFmpeg error: {e}")
+                        print(f"System Error: {e}")
                         
                     send_progress(i + 1, total_files)
 
             if success_count > 0:
                 return True, f"Successfully converted {success_count} files!"
-            return False, "Conversion failed."
+            return False, "Conversion failed. Check the files or try a different format."
             
         except Exception as e:
             return False, str(e)
