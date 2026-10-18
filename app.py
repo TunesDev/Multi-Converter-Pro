@@ -9,8 +9,8 @@ from engine import Engine
 # --- CONFIG ---
 CURRENT_VERSION = "1.1.0"
 # IMPORTANT: Replace "TunesDev" and "ConvertFlow" with your actual GitHub username and repo name
-VERSION_URL = "https://raw.githubusercontent.com/TunesDev/ConvertFlow/main/version.txt"
-DOWNLOAD_URL = "https://github.com/TunesDev/ConvertFlow/releases"
+VERSION_URL = "https://raw.githubusercontent.com/TunesDev/Multi-Converter-Pro/main/version.txt"
+DOWNLOAD_URL = "https://github.com/TunesDev/Multi-Converter-Pro/releases"
 # --------------
 
 def get_html_path():
