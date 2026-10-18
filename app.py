@@ -2,18 +2,22 @@
 import webview
 import os
 import sys
+import requests
 from pathlib import Path
 from engine import Engine
 
+# --- CONFIG ---
+CURRENT_VERSION = "1.1.0"
+# IMPORTANT: Replace "TunesDev" and "ConvertFlow" with your actual GitHub username and repo name
+VERSION_URL = "https://raw.githubusercontent.com/TunesDev/ConvertFlow/main/version.txt"
+DOWNLOAD_URL = "https://github.com/TunesDev/ConvertFlow/releases"
+# --------------
+
 def get_html_path():
-    """Gets the absolute path to index.html, whether running as a script or an EXE."""
     if getattr(sys, 'frozen', False):
-        # Running inside a PyInstaller EXE
         base_path = Path(sys._MEIPASS)
     else:
-        # Running as a normal script
         base_path = Path(__file__).parent
-        
     return str(base_path / "index.html")
 
 class API:
@@ -23,6 +27,17 @@ class API:
 
     def set_window(self, window):
         self._window = window
+
+    def check_updates(self):
+        try:
+            response = requests.get(VERSION_URL, timeout=5)
+            if response.status_code == 200:
+                latest_version = response.text.strip()
+                if latest_version != CURRENT_VERSION:
+                    return True, latest_version, DOWNLOAD_URL
+            return False, CURRENT_VERSION, ""
+        except Exception:
+            return False, "Error connecting to server", ""
 
     def convert_files(self, files, target_format):
         def progress_cb(percent):
@@ -68,7 +83,7 @@ if __name__ == "__main__":
     
     window = webview.create_window(
         title="ConvertFlow Pro", 
-        url=html_path, # Load from the absolute path
+        url=html_path, 
         js_api=api,
         width=1000, 
         height=750,
