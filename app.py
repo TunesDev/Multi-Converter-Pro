@@ -1,7 +1,20 @@
 # app.py
 import webview
 import os
+import sys
 from engine import Engine
+
+# --- THIS FINDS THE HTML FILE INSIDE THE EXE OR LOCAL FOLDER ---
+def get_resource_path(relative_path):
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+HTML_FILE = get_resource_path('index.html')
+# ---------------------------------------------------------------
 
 class API:
     def __init__(self):
@@ -52,9 +65,10 @@ def bind_drag_drop(window):
 
 if __name__ == "__main__":
     api = API()
+    
     window = webview.create_window(
         title="ConvertFlow Pro", 
-        url="index.html", 
+        url=HTML_FILE,  # Using the dynamic path here
         js_api=api,
         width=1000, 
         height=750,
@@ -63,4 +77,8 @@ if __name__ == "__main__":
         easy_drag=True 
     )
     api.set_window(window)
-    webview.start(bind_drag_drop, window)
+    
+    try:
+        webview.start(bind_drag_drop, window)
+    except Exception as e:
+        print(f"App closed: {e}")
