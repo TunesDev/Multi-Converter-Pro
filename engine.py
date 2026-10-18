@@ -15,6 +15,8 @@ class Engine:
     def __init__(self):
         self.output_dir = str(Path.home() / "Downloads" / "Converted_Files")
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Add FFmpeg to PATH for the ffmpeg-python wrapper
         ffmpeg_dir = os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
         os.environ["PATH"] += os.pathsep + ffmpeg_dir
 
@@ -61,14 +63,30 @@ class Engine:
                 for i, f in enumerate(files):
                     out_name = f['name'] + f".{target_format}"
                     out_path = Path(self.output_dir) / out_name
+                    
                     try:
-                        stream = ffmpeg.input(f['path'])
-                        if target_format == "mp3": stream = ffmpeg.output(stream, str(out_path), vn=None, acodec='libmp3lame')
-                        elif target_format == "wav": stream = ffmpeg.output(stream, str(out_path), vn=None, acodec='pcm_s16le')
-                        else: stream = ffmpeg.output(stream, str(out_path))
-                        ffmpeg.run(stream, overwrite_output=True, quiet=True, cmd=ffmpeg_exe)
-                        if out_path.exists(): success_count += 1
-                    except: pass
+                        # We use direct subprocess instead of ffmpeg-python to ensure NO CMD WINDOW
+                        cmd = [ffmpeg_exe, "-y", "-i", f['path'], str(out_path)]
+                        if target_format == "mp3":
+                            cmd.insert(3, "-vn")
+                            cmd.extend(["-acodec", "libmp3lame"])
+                        elif target_format == "wav":
+                            cmd.insert(3, "-vn")
+                            cmd.extend(["-acodec", "pcm_s16le"])
+
+                        # THE MAGIC FLAG: This hides the CMD window
+                        subprocess.run(
+                            cmd, 
+                            stdout=subprocess.DEVNULL, 
+                            stderr=subprocess.DEVNULL, 
+                            creationflags=subprocess.CREATE_NO_WINDOW
+                        )
+                        
+                        if out_path.exists(): 
+                            success_count += 1
+                    except Exception as e:
+                        print(f"FFmpeg error: {e}")
+                        
                     send_progress(i + 1, total_files)
 
             if success_count > 0:
